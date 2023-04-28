@@ -1,5 +1,8 @@
 package xyz.finlaym.pos.data;
 
+import java.util.List;
+
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class OrderLine extends JSONAble{
@@ -10,10 +13,13 @@ public class OrderLine extends JSONAble{
 	private int overrideReason;
 	private int id;
 	private Return ret;
+	private int countReturned;
+	private List<Return> returned;
+	
 	public OrderLine(Product product, int count, int originalPrice, int price, int overrideReason, int id) {
-		this(product,count,originalPrice,price,overrideReason,id,null);
+		this(product,count,originalPrice,price,overrideReason,id,null,0,null);
 	}
-	public OrderLine(Product product, int count, int originalPrice, int price, int overrideReason, int id, Return ret) {
+	public OrderLine(Product product, int count, int originalPrice, int price, int overrideReason, int id, Return ret, int countReturned, List<Return> returned) {
 		this.product = product;
 		this.count = count;
 		this.originalPrice = originalPrice;
@@ -21,6 +27,20 @@ public class OrderLine extends JSONAble{
 		this.overrideReason = overrideReason;
 		this.id = id;
 		this.ret = ret;
+		this.countReturned = countReturned;
+		this.returned = returned;
+	}
+	public List<Return> getReturned() {
+		return returned;
+	}
+	public void setReturned(List<Return> returned) {
+		this.returned = returned;
+	}
+	public int getCountReturned() {
+		return countReturned;
+	}
+	public void setCountReturned(int countReturned) {
+		this.countReturned = countReturned;
 	}
 	public Return getRet() {
 		return ret;
@@ -73,6 +93,15 @@ public class OrderLine extends JSONAble{
 		self.put("originalPrice", originalPrice);
 		self.put("price", price);
 		self.put("overrideReason", overrideReason);
+		if(this.ret != null)
+			self.put("return", ret.toJSON());
+		if(this.returned != null) {
+			JSONArray arr = new JSONArray();
+			for(Return r : returned) {
+				arr.put(r.toJSON());
+			}
+			self.put("returned", arr);
+		}
 		return self;
 	}
 }

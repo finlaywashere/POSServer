@@ -45,13 +45,19 @@ public class SocketHandler extends Thread{
 				String cmd = object.getString("command");
 				switch(cmd.toLowerCase()) {
 				case "create_order":
+					JSONObject result = new JSONObject();
 					JSONObject orderJSON = object.getJSONObject("order");
 					int type = orderJSON.getInt("type");
 					Customer customer = connector.getCustomer(orderJSON.getInt("customer"));
+					if(customer == null) {
+						result.put("status", "customer_not_found");
+						write(result.toString());
+						break;
+					}
 					List<OrderLine> lines = new ArrayList<OrderLine>();
 					int id = connector.getNextOrderLineId();
 					int subtotal = 0;
-					boolean ret = type == Order.TYPE_RETURN;
+					boolean invalid = false;
 					
 					for(Object obj : orderJSON.getJSONArray("lines")) {
 						JSONObject o = (JSONObject) obj;
@@ -61,15 +67,45 @@ public class SocketHandler extends Thread{
 						int price = o.getInt("price");
 						subtotal += price * count;
 						int overrideReason = o.getInt("overrideReason");
-						OrderLine line = new OrderLine(connector.getProduct(product), count, origPrice, price, overrideReason, id);
+						Product p = connector.getProduct(product);
+						if(p == null) {
+							result.put("status", "product_not_found");
+							write(result.toString());
+							invalid = true;
+							break;
+						}
+						OrderLine line = new OrderLine(p, count, origPrice, price, overrideReason, id);
+						boolean ret = count < 0;
 						if(ret) {
 							int origOrder = o.getInt("originalOrder");
-							Return r = new Return(line, connector.getOrderLine(origOrder));
+							OrderLine orig = connector.getOrderLine(origOrder);
+							if(orig == null) {
+								result.put("status", "return_not_found");
+								write(result.toString());
+								invalid = true;
+								break;
+							}
+							if(orig.getProduct().getId() != p.getId() || (orig.getCount()-orig.getCountReturned()) < -count) {
+								result.put("status", "invalid_return_line");
+								write(result.toString());
+								invalid = true;
+								break;
+							}
+							if(orig.getPrice() != line.getPrice()) {
+								result.put("status", "invalid_return_price");
+								write(result.toString());
+								invalid = true;
+								break;
+							}
+							orig.setCountReturned(orig.getCountReturned()-count);
+							Return r = new Return(line, orig);
 							line.setRet(r);
 						}
 						lines.add(line);
 						id++;
 					}
+					if(invalid)
+						break;
 					int total = (int) (subtotal * 1.13);
 					if(customer.isTaxExempt()) {
 						total = (int) (subtotal * 1.08);
@@ -100,7 +136,6 @@ public class SocketHandler extends Thread{
 					int status = 0;
 					Order order = new Order(oid, lines, subtotal, total, customer, comments, user, payments, type, status,0);
 					connector.createOrder(order);
-					JSONObject result = new JSONObject();
 					result.put("status", "success");
 					result.put("order", order.getId());
 					write(result.toString());
@@ -122,16 +157,24 @@ public class SocketHandler extends Thread{
 					id = object.getInt("id");
 					customer = connector.getCustomer(id);
 					result = new JSONObject();
-					result.put("status", "success");
-					result.put("customer", customer.toJSON());
+					if(customer == null) {
+						result.put("status", "not_found");
+					}else {
+						result.put("status", "success");
+						result.put("customer", customer.toJSON());
+					}
 					write(result.toString());
 					break;
 				case "get_product":
 					id = object.getInt("id");
 					Product product = connector.getProduct(id);
 					result = new JSONObject();
-					result.put("status", "success");
-					result.put("product", product.toJSON());
+					if(product == null) {
+						result.put("status", "not_found");
+					}else {
+						result.put("status", "success");
+						result.put("product", product.toJSON());
+					}
 					write(result.toString());
 					break;
 				case "find_payment":

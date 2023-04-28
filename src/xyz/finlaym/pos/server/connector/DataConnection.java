@@ -34,6 +34,8 @@ public abstract class DataConnection {
 	public abstract int getNextPaymentId() throws Exception;
 	public abstract int getNextOrderLineId() throws Exception;
 	public abstract int getNextOrderCommentId() throws Exception;
+	public abstract List<Return> getReturnedLines(int id) throws Exception;
 	public abstract void updateProduct(Product product) throws Exception;
+	public abstract void markReturned(OrderLine line) throws Exception;
 	public abstract List<Payment> findPayment(String identifier) throws Exception;
 }

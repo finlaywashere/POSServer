@@ -207,10 +207,14 @@ public class SQLConnector extends DataConnection{
 		int origPrice = result.getInt("original_price");
 		int price = result.getInt("price");
 		int overrideReason = result.getInt("override_reason");
+		int retCount = result.getInt("count_returned");
 		Return ret = null;
-		if(followRet)
+		List<Return> returned = null;
+		if(followRet) {
 			ret = getReturn(id);
-		return new OrderLine(getProduct(product), count, origPrice, price, overrideReason, id, ret);
+			returned = getReturnedLines(id);
+		}
+		return new OrderLine(getProduct(product), count, origPrice, price, overrideReason, id, ret, retCount, returned);
 	}
 
 	@Override
@@ -360,6 +364,7 @@ public class SQLConnector extends DataConnection{
 		s.setInt(1, ret.getParent().getId());
 		s.setInt(2, ret.getOriginal().getId());
 		s.executeUpdate();
+		markReturned(ret.getOriginal());
 	}
 
 	@Override
@@ -371,7 +376,7 @@ public class SQLConnector extends DataConnection{
 			return null;
 		}
 		int orig = result.getInt("original_order");
-		return new Return(getOrderLine(id, false), getOrderLine(orig));
+		return new Return(getOrderLine(id, false), getOrderLine(orig, false));
 	}
 
 	@Override
@@ -384,5 +389,26 @@ public class SQLConnector extends DataConnection{
 			payments.add(getOrderPayment(result.getInt("id")));
 		}
 		return payments;
+	}
+
+	@Override
+	public void markReturned(OrderLine line) throws Exception {
+		PreparedStatement s = connector.prepareStatement("UPDATE order_lines SET count_returned=? WHERE id=?;");
+		s.setInt(1, line.getCountReturned());
+		s.setInt(2, line.getId());
+		s.executeUpdate();
+	}
+
+	@Override
+	public List<Return> getReturnedLines(int id) throws Exception {
+		PreparedStatement s = connector.prepareStatement("SELECT * FROM returns WHERE original_order=?;");
+		s.setInt(1, id);
+		ResultSet result = s.executeQuery();
+		List<Return> ret = new ArrayList<Return>();
+		while(result.next()) {
+			int parent = result.getInt("parent");
+			ret.add(new Return(getOrderLine(parent, false), getOrderLine(id, false)));
+		}
+		return ret;
 	}
 }
