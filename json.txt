@@ -1,0 +1,3 @@
+{"command":"create_order","order":{"type":0,"customer":0,"lines":[{"product":0,"count":1,"originalPrice":1,"price":2,"overrideReason":0}],"comments":[{"type":0,"value":"Test1234567"}],"payments":[{"type":0,"amount":2,"identifier":"cash","authorization":"000000"}]}}
+
+{"command":"get_order","id":0}
