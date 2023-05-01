@@ -411,4 +411,17 @@ public class SQLConnector extends DataConnection{
 		}
 		return ret;
 	}
+
+	@Override
+	public List<Customer> findCustomers(String phone) throws Exception {
+		PreparedStatement s = connector.prepareStatement("SELECT id FROM customers WHERE phone=?;");
+		s.setString(1, phone);
+		ResultSet result = s.executeQuery();
+		List<Customer> ret = new ArrayList<Customer>();
+		while(result.next()) {
+			int id = result.getInt("id");
+			ret.add(getCustomer(id));
+		}
+		return ret;
+	}
 }

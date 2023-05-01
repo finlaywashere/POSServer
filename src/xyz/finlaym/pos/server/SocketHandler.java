@@ -190,6 +190,19 @@ public class SocketHandler extends Thread{
 					result.put("payments", arr);
 					write(result.toString());
 					break;
+				case "find_customer":
+					String phone = object.getString("phone");
+					List<Customer> customerList = connector.findCustomers(phone);
+					result = new JSONObject();
+					
+					arr = new JSONArray();
+					for(Customer c : customerList) {
+						arr.put(c.toJSON());
+					}
+					result.put("status", "success");
+					result.put("customers", arr);
+					write(result.toString());
+					break;
 				}
 			}
 		} catch (Exception e) {
