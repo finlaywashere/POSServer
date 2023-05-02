@@ -27,8 +27,8 @@ public class Return extends JSONAble{
 	@Override
 	public JSONObject toJSON() {
 		JSONObject self = new JSONObject();
-		self.put("parent", parent);
-		self.put("original", original);
+		self.put("parent", parent.getId());
+		self.put("original", original.getId());
 		return self;
 	}
 

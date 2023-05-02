@@ -9,6 +9,12 @@ public class Order extends JSONAble{
 	public static final int TYPE_SALE = 0;
 	public static final int TYPE_RETURN = 1;
 	
+	public static final int STATUS_READY = 1;
+	public static final int STATUS_COMPLETE = 0;
+	
+	public static final int ORDER_CARRY = 1;
+	public static final int ORDER_PICKUP = 0;
+	
 	private int id;
 	private List<OrderLine> lines;
 	private int subtotal;
@@ -20,9 +26,10 @@ public class Order extends JSONAble{
 	private int type;
 	private int status;
 	private long creation_date;
+	private int register;
 	
 	public Order(int id, List<OrderLine> lines, int subtotal, int total, Customer customer, List<Comment> comments,
-			User creator, List<Payment> payments, int type, int status, long creation_date) {
+			User creator, List<Payment> payments, int type, int status, long creation_date, int register) {
 		this.id = id;
 		this.lines = lines;
 		this.subtotal = subtotal;
@@ -34,6 +41,13 @@ public class Order extends JSONAble{
 		this.type = type;
 		this.status = status;
 		this.creation_date = creation_date;
+		this.register = register;
+	}
+	public int getRegister() {
+		return register;
+	}
+	public void setRegister(int register) {
+		this.register = register;
 	}
 	public long getCreation_date() {
 		return creation_date;
@@ -116,6 +130,9 @@ public class Order extends JSONAble{
 		self.put("subtotal", subtotal);
 		self.put("total", total);
 		self.put("status", status);
+		self.put("register", register);
+		self.put("creation", creation_date);
+		self.put("customer", customer.toJSON());
 		JSONArray comments = new JSONArray();
 		for(Comment c : this.comments) {
 			comments.put(comments.length(), c.toJSON());
@@ -128,6 +145,9 @@ public class Order extends JSONAble{
 		for(OrderLine l : this.lines) {
 			lines.put(lines.length(), l.toJSON());
 		}
+		self.put("comments", comments);
+		self.put("payments", payments);
+		self.put("lines", lines);
 		return self;
 	}
 }

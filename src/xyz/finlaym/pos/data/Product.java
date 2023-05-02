@@ -78,6 +78,8 @@ public class Product extends JSONAble{
 		self.put("model", model);
 		self.put("desc", desc);
 		self.put("url", url);
+		self.put("price", price);
+		self.put("upc", upc);
 		return self;
 	}
 	

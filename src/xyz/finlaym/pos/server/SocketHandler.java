@@ -1,6 +1,7 @@
 package xyz.finlaym.pos.server;
 
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,8 +40,11 @@ public class SocketHandler extends Thread{
 				return;
 			}
 			
-			while(channel.isOpen()) {
+			while(channel.isConnected()) {
+				Thread.sleep(50);
 				String data = read();
+				if(data == null)
+					return;
 				JSONObject object = new JSONObject(data);
 				String cmd = object.getString("command");
 				switch(cmd.toLowerCase()) {
@@ -48,6 +52,7 @@ public class SocketHandler extends Thread{
 					JSONObject result = new JSONObject();
 					JSONObject orderJSON = object.getJSONObject("order");
 					int type = orderJSON.getInt("type");
+					int register = orderJSON.getInt("register");
 					Customer customer = connector.getCustomer(orderJSON.getInt("customer"));
 					if(customer == null) {
 						result.put("status", "customer_not_found");
@@ -63,7 +68,6 @@ public class SocketHandler extends Thread{
 						JSONObject o = (JSONObject) obj;
 						int product = o.getInt("product");
 						int count = o.getInt("count");
-						int origPrice = o.getInt("originalPrice");
 						int price = o.getInt("price");
 						subtotal += price * count;
 						int overrideReason = o.getInt("overrideReason");
@@ -74,8 +78,12 @@ public class SocketHandler extends Thread{
 							invalid = true;
 							break;
 						}
-						OrderLine line = new OrderLine(p, count, origPrice, price, overrideReason, id);
 						boolean ret = count < 0;
+						int origPrice = p.getPrice();
+						if(ret)
+							origPrice *= -1;
+						OrderLine line = new OrderLine(p, count, origPrice, price, overrideReason, id);
+						
 						if(ret) {
 							int origOrder = o.getInt("originalOrder");
 							OrderLine orig = connector.getOrderLine(origOrder);
@@ -116,7 +124,7 @@ public class SocketHandler extends Thread{
 						JSONObject o = (JSONObject) obj;
 						int cType = o.getInt("type");
 						String value = o.getString("value");
-						Comment comment = new Comment(id, value, cType, user);
+						Comment comment = new Comment(id, value, cType, user, 0);
 						comments.add(comment);
 						id++;
 					}
@@ -133,8 +141,12 @@ public class SocketHandler extends Thread{
 						payments.add(payment);
 						id++;
 					}
-					int status = 0;
-					Order order = new Order(oid, lines, subtotal, total, customer, comments, user, payments, type, status,0);
+					int dispo = orderJSON.getInt("dispo");
+					int status = 1;
+					if(dispo == Order.ORDER_CARRY) {
+						status = 0;
+					}
+					Order order = new Order(oid, lines, subtotal, total, customer, comments, user, payments, type, status,0,register);
 					connector.createOrder(order);
 					result.put("status", "success");
 					result.put("order", order.getId());
@@ -203,6 +215,31 @@ public class SocketHandler extends Thread{
 					result.put("customers", arr);
 					write(result.toString());
 					break;
+				case "find_order":
+					int cust = object.getInt("customer");
+					List<Order> orderList = connector.findOrders(cust);
+					result = new JSONObject();
+					
+					arr = new JSONArray();
+					for(Order o : orderList) {
+						arr.put(o.toJSON());
+					}
+					result.put("status", "success");
+					result.put("orders", arr);
+					write(result.toString());
+					break;
+				case "pickup_order":
+					Order o = connector.getOrder(object.getInt("id"));
+					result = new JSONObject();
+					if(o.getStatus() != Order.STATUS_READY) {
+						result.put("status", "invalid_status");
+					}else {
+						o.setStatus(Order.STATUS_COMPLETE);
+						connector.updateStatus(o);
+						result.put("status", "success");
+					}
+					write(result.toString());
+					break;
 				}
 			}
 		} catch (Exception e) {
@@ -217,17 +254,25 @@ public class SocketHandler extends Thread{
 	private String read() throws Exception{
 		StringBuffer str = new StringBuffer();
 		int count = 0;
-		ByteBuffer data = ByteBuffer.allocate(10000);
-		while(count < 5000) {
-			int numRead = channel.read(data);
-			if(numRead > 0) {
-				String c = new String(data.array());
-				str.append(c);
-				if(c.contains("\n")) {
-					return str.toString().strip();
+		try {
+			ByteBuffer data = ByteBuffer.allocate(10000);
+			while(count < 5000) {
+				int numRead = channel.read(data);
+				if(numRead == -1) {
+					channel.close();
+					join(500);
 				}
-				count++;
+				if(numRead > 0) {
+					String c = new String(data.array());
+					str.append(c);
+					if(c.contains("\n")) {
+						return str.toString().strip();
+					}
+					count++;
+				}
 			}
+		}catch(ClosedChannelException e) {
+			return null;
 		}
 		return null;
 	}

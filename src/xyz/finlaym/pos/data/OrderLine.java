@@ -93,6 +93,7 @@ public class OrderLine extends JSONAble{
 		self.put("originalPrice", originalPrice);
 		self.put("price", price);
 		self.put("overrideReason", overrideReason);
+		self.put("returnedCount", countReturned);
 		if(this.ret != null)
 			self.put("return", ret.toJSON());
 		if(this.returned != null) {

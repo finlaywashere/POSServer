@@ -35,13 +35,15 @@ public class SQLConnector extends DataConnection{
 
 	@Override
 	public void createOrder(Order order) throws Exception{
-		PreparedStatement s = connector.prepareStatement("INSERT INTO orders (id, type, status, subtotal, total, user) VALUES (?,?,?,?,?,?);");
+		PreparedStatement s = connector.prepareStatement("INSERT INTO orders (id, type, status, subtotal, total, user, register, customer) VALUES (?,?,?,?,?,?,?,?);");
 		s.setInt(1, order.getId());
 		s.setInt(2, order.getType());
 		s.setInt(3, order.getStatus());
 		s.setInt(4, order.getSubtotal());
 		s.setInt(5, order.getTotal());
 		s.setInt(6, order.getCreator().getId());
+		s.setInt(7, order.getRegister());
+		s.setInt(8,order.getCustomer().getId());
 		s.execute();
 		for(OrderLine l : order.getLines()) {
 			createOrderLine(order, l);
@@ -123,6 +125,7 @@ public class SQLConnector extends DataConnection{
 		int total = result.getInt("total");
 		int user = result.getInt("user");
 		int customer = result.getInt("customer");
+		int register = result.getInt("register");
 		Timestamp creation_date = result.getTimestamp("creation_date");
 		long time = creation_date.toInstant().getEpochSecond();
 		List<OrderLine> lines = new ArrayList<OrderLine>();
@@ -146,7 +149,7 @@ public class SQLConnector extends DataConnection{
 		while(result.next()) {
 			payments.add(getOrderPayment(result.getInt("id")));
 		}
-		return new Order(id, lines, subtotal, total, getCustomer(customer), comments, getUser(user), payments, type, status, time);
+		return new Order(id, lines, subtotal, total, getCustomer(customer), comments, getUser(user), payments, type, status, time, register);
 	}
 
 	@Override
@@ -228,7 +231,9 @@ public class SQLConnector extends DataConnection{
 		int creator = result.getInt("creator");
 		int type = result.getInt("type");
 		String value = result.getString("value");
-		return new Comment(id, value, type, getUser(creator));
+		Timestamp creation_date = result.getTimestamp("timestamp");
+		long time = creation_date.toInstant().getEpochSecond();
+		return new Comment(id, value, type, getUser(creator), time);
 	}
 
 	@Override
@@ -250,8 +255,9 @@ public class SQLConnector extends DataConnection{
 
 	@Override
 	public Product getProduct(int id) throws Exception {
-		PreparedStatement s = connector.prepareStatement("SELECT * FROM products WHERE id=?;");
+		PreparedStatement s = connector.prepareStatement("SELECT * FROM products WHERE id=? OR upc=?;");
 		s.setInt(1, id);
+		s.setInt(2, id);
 		ResultSet result = s.executeQuery();
 		if(!result.next()) {
 			return null;
@@ -423,5 +429,26 @@ public class SQLConnector extends DataConnection{
 			ret.add(getCustomer(id));
 		}
 		return ret;
+	}
+
+	@Override
+	public List<Order> findOrders(int cust) throws Exception {
+		PreparedStatement s = connector.prepareStatement("SELECT id FROM orders WHERE customer=?;");
+		s.setInt(1, cust);
+		ResultSet result = s.executeQuery();
+		List<Order> ret = new ArrayList<Order>();
+		while(result.next()) {
+			int id = result.getInt("id");
+			ret.add(getOrder(id));
+		}
+		return ret;
+	}
+
+	@Override
+	public void updateStatus(Order order) throws Exception {
+		PreparedStatement s = connector.prepareStatement("UPDATE orders SET status=? WHERE id=?;");
+		s.setInt(1, order.getStatus());
+		s.setInt(2, order.getId());
+		s.executeUpdate();
 	}
 }

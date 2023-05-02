@@ -9,11 +9,17 @@ public class Comment extends JSONAble{
 	private String value;
 	private int type;
 	private User creator;
-	public Comment(int id, String value, int type, User creator) {
+	private long timestamp;
+	
+	public Comment(int id, String value, int type, User creator, long timestamp) {
 		this.id = id;
 		this.value = value;
 		this.type = type;
 		this.creator = creator;
+		this.timestamp = timestamp;
+	}
+	public long getTimestamp() {
+		return timestamp;
 	}
 	public int getId() {
 		return id;
@@ -46,6 +52,7 @@ public class Comment extends JSONAble{
 		self.put("value", value);
 		self.put("type", type);
 		self.put("creator", creator.toJSON());
+		self.put("creation", timestamp);
 		return self;
 	}
 }

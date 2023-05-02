@@ -37,6 +37,8 @@ public abstract class DataConnection {
 	public abstract List<Return> getReturnedLines(int id) throws Exception;
 	public abstract void updateProduct(Product product) throws Exception;
 	public abstract void markReturned(OrderLine line) throws Exception;
+	public abstract void updateStatus(Order order) throws Exception;
 	public abstract List<Payment> findPayment(String identifier) throws Exception;
 	public abstract List<Customer> findCustomers(String phone) throws Exception;
+	public abstract List<Order> findOrders(int cust) throws Exception;
 }
