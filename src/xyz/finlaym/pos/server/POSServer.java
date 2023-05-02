@@ -16,7 +16,7 @@ import xyz.finlaym.pos.server.connector.SQLConnector;
 public class POSServer {
 	public static void main(String[] args) throws Exception {
 		DataConnection connection = new SQLConnector();
-		File socket = new File("/home/finlay/active/programming/HTML/pos/pos.sock");
+		File socket = new File("/src/http/pos.sock");
 		if(socket.exists()) {
 			socket.delete();
 		}
