@@ -78,7 +78,7 @@ public class SocketHandler extends Thread{
 							invalid = true;
 							break;
 						}
-						boolean ret = count < 0;
+						boolean ret = price < 0;
 						int origPrice = p.getPrice();
 						if(ret)
 							origPrice *= -1;
@@ -131,10 +131,12 @@ public class SocketHandler extends Thread{
 					List<Payment> payments = new ArrayList<Payment>();
 					id = connector.getNextPaymentId();
 					int oid = connector.getNextOrderId();
+					int pTotal = 0;
 					for(Object obj : orderJSON.getJSONArray("payments")) {
 						JSONObject o = (JSONObject) obj;
 						int pType = o.getInt("type");
 						int amount = o.getInt("amount");
+						pTotal += amount;
 						String ident = o.getString("identifier");
 						String auth = o.getString("authorization");
 						Payment payment = new Payment(id, user, pType, amount, ident, auth, oid);
@@ -145,6 +147,11 @@ public class SocketHandler extends Thread{
 					int status = 1;
 					if(dispo == Order.ORDER_CARRY) {
 						status = 0;
+					}
+					if(pTotal != total) {
+						result.put("status", "invalid_totals");
+						write(result.toString());
+						break;
 					}
 					Order order = new Order(oid, lines, subtotal, total, customer, comments, user, payments, type, status,0,register);
 					connector.createOrder(order);
