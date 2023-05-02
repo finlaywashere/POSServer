@@ -78,7 +78,7 @@ public class SocketHandler extends Thread{
 							invalid = true;
 							break;
 						}
-						boolean ret = price < 0;
+						boolean ret = count < 0;
 						int origPrice = p.getPrice();
 						if(ret)
 							origPrice *= -1;
